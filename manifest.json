@@ -1,0 +1,9 @@
+{
+  "name": "VisionLayout AI - 终极像素对齐",
+  "id": "vision-layout-ai-ultimate",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "permissions": ["currentuser"],
+  "editorType": ["figma"]
+}

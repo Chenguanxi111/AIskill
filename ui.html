@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<body style="font-family: sans-serif; padding: 16px; background: #fff;">
+  <div style="border: 2px dashed #eee; padding: 12px; margin-bottom: 12px; border-radius: 8px;">
+    <b>1. 上传效果底图</b><br><input type="file" id="f-bg" onchange="load(this, 'bg')">
+  </div>
+  <div style="border: 2px dashed #eee; padding: 12px; margin-bottom: 12px; border-radius: 8px;">
+    <b>2. 放入切图资源</b><br><input type="file" id="f-as" multiple onchange="load(this, 'as')">
+  </div>
+  <button id="run-btn" onclick="startNewAlgorithm()" style="width:100%; height:44px; background:#18a0fb; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">启动全新精准命中算法</button>
+  <p id="status" style="font-size:12px; color:#666; text-align:center; margin-top:10px;">准备就绪</p>
+
+  <script>
+    let bgBase64 = null, assetsList = [];
+
+    async function load(el, type) {
+      const fr = new FileReader();
+      if (type === 'bg') {
+        fr.onload = (e) => bgBase64 = e.target.result;
+        fr.readAsDataURL(el.files[0]);
+      } else {
+        assetsList = [];
+        for(let f of el.files) {
+          const r = new FileReader();
+          r.onload = (ev) => assetsList.push({name: f.name, data: ev.target.result});
+          r.readAsDataURL(f);
+        }
+      }
+    }
+
+    async function startNewAlgorithm() {
+      const status = document.getElementById('status');
+      if (!bgBase64 || assetsList.length === 0) return;
+      status.innerText = "正在初始化全新识别引擎...";
+
+      const bImg = await imgP(bgBase64);
+      const bCan = document.createElement('canvas');
+      bCan.width = bImg.width; bCan.height = bImg.height;
+      const bCtx = bCan.getContext('2d', {willReadFrequently:true});
+      bCtx.drawImage(bImg, 0, 0);
+      const bData = bCtx.getImageData(0, 0, bCan.width, bCan.height).data;
+
+      const results = [], binMap = {};
+
+      for (let asset of assetsList) {
+        status.innerText = `正在高精度扫描: ${asset.name}`;
+        // 渲染切图到 Canvas
+        const sImg = await imgP(asset.data);
+        const sCan = document.createElement('canvas');
+        sCan.width = sImg.width; sCan.height = sImg.height;
+        const sCtx = sCan.getContext('2d', {willReadFrequently:true});
+        sCtx.drawImage(sImg, 0, 0);
+        const sData = sCtx.getImageData(0, 0, sCan.width, sCan.height).data;
+
+        // 1. 均匀采集切图的“有效像素”（跳过透明区域）
+        const samplePoints = [];
+        for (let y = 0; y < sCan.height; y += 1) {
+          for (let x = 0; x < sCan.width; x += 1) {
+            const idx = (y * sCan.width + x) * 4;
+            if (sData[idx+3] > 240) { // 只取极度不透明的像素
+              samplePoints.push({x, y, r: sData[idx], g: sData[idx+1], b: sData[idx+2]});
+            }
+          }
+        }
+
+        // 为了保证速度，如果切图过大，我们最多只抽取 800 个点进行核对
+        const step = Math.max(1, Math.floor(samplePoints.length / 800));
+        const anchors = [];
+        for (let i = 0; i < samplePoints.length; i += step) {
+          anchors.push(samplePoints[i]);
+        }
+
+        // 2. 核心算法：最大内点命中率 (Max Hits) + 提前剪枝
+        let bestX = 0, bestY = 0, maxHits = -1;
+        const TOLERANCE = 15; // 色差阈值：RGB总偏差小于15即视为“完美命中”
+        const totalAnchors = anchors.length;
+
+        // 1px 极致步进，逐像素扫描底图
+        for (let y = 0; y <= bCan.height - sCan.height; y++) {
+          for (let x = 0; x <= bCan.width - sCan.width; x++) {
+            let hits = 0;
+            let misses = 0;
+            
+            for (let a of anchors) {
+              const bIdx = ((y + a.y) * bCan.width + (x + a.x)) * 4;
+              const diff = Math.abs(bData[bIdx] - a.r) + Math.abs(bData[bIdx+1] - a.g) + Math.abs(bData[bIdx+2] - a.b);
+              
+              if (diff <= TOLERANCE) {
+                hits++;
+              } else {
+                misses++;
+                // 【核心加速逻辑】：如果当前位置已经不可能打破历史最高记录，直接放弃当前像素，检查下一个。
+                if (totalAnchors - misses <= maxHits) {
+                  break; 
+                }
+              }
+            }
+
+            if (hits > maxHits) {
+              maxHits = hits;
+              bestX = x;
+              bestY = y;
+            }
+
+            // 【极致提速】：如果吻合度高达 98%，说明绝对找到了，直接跳出循环！
+            if (maxHits > totalAnchors * 0.98) break; 
+          }
+          if (maxHits > totalAnchors * 0.98) break; 
+        }
+
+        results.push({ file: asset.name, x: bestX, y: bestY, w: sCan.width, h: sCan.height });
+        binMap[asset.name] = new Uint8Array(atob(asset.data.split(',')[1]).split('').map(c => c.charCodeAt(0)));
+      }
+
+      parent.postMessage({ pluginMessage: { 
+        type: 'final-render', 
+        config: { bw: bCan.width, bh: bCan.height, list: results },
+        assets: binMap, 
+        bgData: new Uint8Array(atob(bgBase64.split(',')[1]).split('').map(c => c.charCodeAt(0)))
+      }}, '*');
+    }
+
+    function imgP(src) { return new Promise(res => { const i = new Image(); i.onload = () => res(i); i.src = src; }); }
+  </script>
+</body>
+</html>
