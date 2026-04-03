@@ -1,126 +1,666 @@
-<!DOCTYPE html>
-<html>
-<body style="font-family: sans-serif; padding: 16px; background: #fff;">
-  <div style="border: 2px dashed #eee; padding: 12px; margin-bottom: 12px; border-radius: 8px;">
-    <b>1. 上传效果底图</b><br><input type="file" id="f-bg" onchange="load(this, 'bg')">
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>VisionLayout AI</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --line: #dbe5f0;
+      --line-strong: #c5d4e6;
+      --text: #182535;
+      --muted: #6f7f92;
+      --primary: #2592f2;
+      --primary-deep: #1677d8;
+      --primary-soft: #edf6ff;
+      --danger: #f25568;
+      --danger-soft: #fff1f3;
+      --shadow: 0 16px 40px rgba(18, 45, 84, 0.14);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      background:
+        radial-gradient(circle at top left, rgba(37, 146, 242, 0.08), transparent 36%),
+        linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+    }
+
+    .app {
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid rgba(197, 212, 230, 0.9);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+      backdrop-filter: blur(12px);
+    }
+
+    .hero {
+      padding: 4px 2px 8px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      color: var(--primary-deep);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .title {
+      margin: 10px 0 0;
+      font-size: 22px;
+      line-height: 1.15;
+      font-weight: 800;
+    }
+
+    .stack {
+      display: grid;
+      gap: 12px;
+    }
+
+    .picker {
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--card);
+      padding: 12px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .picker:hover {
+      border-color: var(--line-strong);
+      box-shadow: 0 8px 22px rgba(18, 45, 84, 0.06);
+      transform: translateY(-1px);
+    }
+
+    .picker.ready {
+      border-color: rgba(37, 146, 242, 0.42);
+      box-shadow: 0 10px 24px rgba(37, 146, 242, 0.1);
+    }
+
+    .picker-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .picker-title {
+      margin: 0;
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .picker-label {
+      margin-top: 4px;
+      font-size: 20px;
+      line-height: 1.1;
+      font-weight: 800;
+    }
+
+    .clear-btn {
+      width: 30px;
+      height: 30px;
+      border: 0;
+      border-radius: 10px;
+      background: var(--danger-soft);
+      color: var(--danger);
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+
+    .clear-btn.show {
+      display: inline-flex;
+    }
+
+    .clear-btn:hover {
+      transform: scale(1.05);
+      background: #ffe3e8;
+    }
+
+    .picker-body {
+      display: grid;
+      gap: 10px;
+    }
+
+    .action-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .select-btn {
+      appearance: none;
+      border: 0;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--primary) 0%, #49adff 100%);
+      color: #fff;
+      font-weight: 700;
+      padding: 10px 16px;
+      cursor: pointer;
+      box-shadow: 0 10px 18px rgba(37, 146, 242, 0.2);
+    }
+
+    .meta {
+      min-height: 20px;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      word-break: break-all;
+    }
+
+    .picker-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .run-btn {
+      width: 100%;
+      height: 48px;
+      border: 0;
+      border-radius: 16px;
+      background: linear-gradient(135deg, var(--primary) 0%, #42a6ff 100%);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 14px 26px rgba(37, 146, 242, 0.22);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+    }
+
+    .run-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 32px rgba(37, 146, 242, 0.28);
+    }
+
+    .run-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .status {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+      min-height: 22px;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="hero">
+      <div class="badge">资源定位引擎</div>
+      <h1 class="title">VisionLayout AI</h1>
+    </div>
+
+    <div class="stack">
+      <section class="picker" id="bg-card">
+        <div class="picker-head">
+          <div>
+            <p class="picker-title">STEP 1</p>
+            <div class="picker-label">上传效果底图</div>
+          </div>
+          <button id="bg-clear" class="clear-btn" type="button" title="清除已选底图" onclick="clearSelection('bg')">×</button>
+        </div>
+        <div class="picker-body">
+          <div class="action-row">
+            <button class="select-btn" type="button" onclick="document.getElementById('f-bg').click()">选择文件</button>
+            <div class="meta" id="bg-meta">未选择任何文件</div>
+          </div>
+          <div class="picker-note">建议上传完整效果图，作为资源定位的参考底图。</div>
+          <input type="file" id="f-bg" accept="image/*" onchange="load(this, 'bg')">
+        </div>
+      </section>
+
+      <section class="picker" id="asset-card">
+        <div class="picker-head">
+          <div>
+            <p class="picker-title">STEP 2</p>
+            <div class="picker-label">放入切图资源</div>
+          </div>
+          <button id="asset-clear" class="clear-btn" type="button" title="清除已选资源" onclick="clearSelection('as')">×</button>
+        </div>
+        <div class="picker-body">
+          <div class="action-row">
+            <button class="select-btn" type="button" onclick="document.getElementById('f-as').click()">选择文件</button>
+            <div class="meta" id="asset-meta">未选择任何文件</div>
+          </div>
+          <div class="picker-note">这里放入需要自动回摆的切图资源。支持同一资源在效果图中重复创建。</div>
+          <input type="file" id="f-as" multiple accept="image/*" onchange="load(this, 'as')">
+        </div>
+      </section>
+
+      <button id="run-btn" class="run-btn" type="button" onclick="startNewAlgorithm()">启动全新精准命中算法</button>
+      <div id="status" class="status">准备就绪</div>
+    </div>
   </div>
-  <div style="border: 2px dashed #eee; padding: 12px; margin-bottom: 12px; border-radius: 8px;">
-    <b>2. 放入切图资源</b><br><input type="file" id="f-as" multiple onchange="load(this, 'as')">
-  </div>
-  <button id="run-btn" onclick="startNewAlgorithm()" style="width:100%; height:44px; background:#18a0fb; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">启动全新精准命中算法</button>
-  <p id="status" style="font-size:12px; color:#666; text-align:center; margin-top:10px;">准备就绪</p>
 
   <script>
-    let bgBase64 = null, assetsList = [];
+    let bgBase64 = null;
+    let assetsList = [];
 
     async function load(el, type) {
-      const fr = new FileReader();
       if (type === 'bg') {
-        fr.onload = (e) => bgBase64 = e.target.result;
-        fr.readAsDataURL(el.files[0]);
+        const file = el.files && el.files[0];
+        if (!file) return;
+        bgBase64 = await readAsDataURL(file);
+        updatePickerUI();
+        return;
+      }
+
+      const files = Array.from(el.files || []);
+      assetsList = await Promise.all(
+        files.map(async (file) => ({
+          name: file.name,
+          data: await readAsDataURL(file)
+        }))
+      );
+      updatePickerUI();
+    }
+
+    function clearSelection(type) {
+      if (type === 'bg') {
+        bgBase64 = null;
+        document.getElementById('f-bg').value = '';
       } else {
         assetsList = [];
-        for(let f of el.files) {
-          const r = new FileReader();
-          r.onload = (ev) => assetsList.push({name: f.name, data: ev.target.result});
-          r.readAsDataURL(f);
-        }
+        document.getElementById('f-as').value = '';
       }
+
+      setStatus('已清除选择，可以重新上传。');
+      updatePickerUI();
+    }
+
+    function updatePickerUI() {
+      const bgReady = Boolean(bgBase64);
+      const assetsReady = assetsList.length > 0;
+
+      const bgCard = document.getElementById('bg-card');
+      const assetCard = document.getElementById('asset-card');
+      const bgMeta = document.getElementById('bg-meta');
+      const assetMeta = document.getElementById('asset-meta');
+      const bgClear = document.getElementById('bg-clear');
+      const assetClear = document.getElementById('asset-clear');
+      const runBtn = document.getElementById('run-btn');
+
+      bgCard.classList.toggle('ready', bgReady);
+      assetCard.classList.toggle('ready', assetsReady);
+      bgClear.classList.toggle('show', bgReady);
+      assetClear.classList.toggle('show', assetsReady);
+
+      bgMeta.textContent = bgReady ? getFileName(document.getElementById('f-bg')) : '未选择任何文件';
+      assetMeta.textContent = assetsReady
+        ? `${assetsList.length} 个文件已选择`
+        : '未选择任何文件';
+
+      runBtn.disabled = !(bgReady && assetsReady);
     }
 
     async function startNewAlgorithm() {
       const status = document.getElementById('status');
       if (!bgBase64 || assetsList.length === 0) return;
-      status.innerText = "正在初始化全新识别引擎...";
+
+      status.innerText = '正在初始化全新识别引擎...';
 
       const bImg = await imgP(bgBase64);
       const bCan = document.createElement('canvas');
-      bCan.width = bImg.width; bCan.height = bImg.height;
-      const bCtx = bCan.getContext('2d', {willReadFrequently:true});
+      bCan.width = bImg.width;
+      bCan.height = bImg.height;
+
+      const bCtx = bCan.getContext('2d', { willReadFrequently: true });
       bCtx.drawImage(bImg, 0, 0);
       const bData = bCtx.getImageData(0, 0, bCan.width, bCan.height).data;
 
-      const results = [], binMap = {};
+      const results = [];
+      const binMap = {};
 
-      for (let asset of assetsList) {
+      for (const asset of assetsList) {
         status.innerText = `正在高精度扫描: ${asset.name}`;
-        // 渲染切图到 Canvas
+
         const sImg = await imgP(asset.data);
         const sCan = document.createElement('canvas');
-        sCan.width = sImg.width; sCan.height = sImg.height;
-        const sCtx = sCan.getContext('2d', {willReadFrequently:true});
+        sCan.width = sImg.width;
+        sCan.height = sImg.height;
+
+        const sCtx = sCan.getContext('2d', { willReadFrequently: true });
         sCtx.drawImage(sImg, 0, 0);
         const sData = sCtx.getImageData(0, 0, sCan.width, sCan.height).data;
 
-        // 1. 均匀采集切图的“有效像素”（跳过透明区域）
-        const samplePoints = [];
-        for (let y = 0; y < sCan.height; y += 1) {
-          for (let x = 0; x < sCan.width; x += 1) {
-            const idx = (y * sCan.width + x) * 4;
-            if (sData[idx+3] > 240) { // 只取极度不透明的像素
-              samplePoints.push({x, y, r: sData[idx], g: sData[idx+1], b: sData[idx+2]});
-            }
-          }
+        const anchors = buildAnchors(sCan, sData);
+        if (!anchors.length) {
+          continue;
         }
 
-        // 为了保证速度，如果切图过大，我们最多只抽取 800 个点进行核对
-        const step = Math.max(1, Math.floor(samplePoints.length / 800));
-        const anchors = [];
-        for (let i = 0; i < samplePoints.length; i += step) {
-          anchors.push(samplePoints[i]);
+        const matches = findMatchesForAsset(bCan, bData, sCan, anchors);
+        const layerHint = getLayerHint(asset.name, sCan, sData, anchors);
+        results.push(
+          ...matches.map((match) => ({
+            file: asset.name,
+            x: match.x,
+            y: match.y,
+            w: sCan.width,
+            h: sCan.height,
+            hitRatio: match.hitRatio,
+            layerHint
+          }))
+        );
+
+        binMap[asset.name] = dataUrlToUint8Array(asset.data);
+        if (matches.length > 1) {
+          status.innerText = `正在高精度扫描: ${asset.name}，已识别 ${matches.length} 个重复实例`;
         }
-
-        // 2. 核心算法：最大内点命中率 (Max Hits) + 提前剪枝
-        let bestX = 0, bestY = 0, maxHits = -1;
-        const TOLERANCE = 15; // 色差阈值：RGB总偏差小于15即视为“完美命中”
-        const totalAnchors = anchors.length;
-
-        // 1px 极致步进，逐像素扫描底图
-        for (let y = 0; y <= bCan.height - sCan.height; y++) {
-          for (let x = 0; x <= bCan.width - sCan.width; x++) {
-            let hits = 0;
-            let misses = 0;
-            
-            for (let a of anchors) {
-              const bIdx = ((y + a.y) * bCan.width + (x + a.x)) * 4;
-              const diff = Math.abs(bData[bIdx] - a.r) + Math.abs(bData[bIdx+1] - a.g) + Math.abs(bData[bIdx+2] - a.b);
-              
-              if (diff <= TOLERANCE) {
-                hits++;
-              } else {
-                misses++;
-                // 【核心加速逻辑】：如果当前位置已经不可能打破历史最高记录，直接放弃当前像素，检查下一个。
-                if (totalAnchors - misses <= maxHits) {
-                  break; 
-                }
-              }
-            }
-
-            if (hits > maxHits) {
-              maxHits = hits;
-              bestX = x;
-              bestY = y;
-            }
-
-            // 【极致提速】：如果吻合度高达 98%，说明绝对找到了，直接跳出循环！
-            if (maxHits > totalAnchors * 0.98) break; 
-          }
-          if (maxHits > totalAnchors * 0.98) break; 
-        }
-
-        results.push({ file: asset.name, x: bestX, y: bestY, w: sCan.width, h: sCan.height });
-        binMap[asset.name] = new Uint8Array(atob(asset.data.split(',')[1]).split('').map(c => c.charCodeAt(0)));
       }
 
-      parent.postMessage({ pluginMessage: { 
-        type: 'final-render', 
-        config: { bw: bCan.width, bh: bCan.height, list: results },
-        assets: binMap, 
-        bgData: new Uint8Array(atob(bgBase64.split(',')[1]).split('').map(c => c.charCodeAt(0)))
-      }}, '*');
+      parent.postMessage({
+        pluginMessage: {
+          type: 'final-render',
+          config: { bw: bCan.width, bh: bCan.height, list: results },
+          assets: binMap,
+          bgData: dataUrlToUint8Array(bgBase64)
+        }
+      }, '*');
+
+      status.innerText = `识别完成，共放置 ${results.length} 个资源实例`;
     }
 
-    function imgP(src) { return new Promise(res => { const i = new Image(); i.onload = () => res(i); i.src = src; }); }
+    function setStatus(message) {
+      document.getElementById('status').innerText = message;
+    }
+
+    function getFileName(input) {
+      const file = input && input.files && input.files[0];
+      return file ? file.name : '已选择文件';
+    }
+
+    function buildAnchors(sCan, sData) {
+      const samplePoints = [];
+      const softPoints = [];
+      let maxAlpha = 0;
+
+      for (let y = 0; y < sCan.height; y += 1) {
+        for (let x = 0; x < sCan.width; x += 1) {
+          const idx = (y * sCan.width + x) * 4;
+          const alpha = sData[idx + 3];
+          if (alpha > maxAlpha) {
+            maxAlpha = alpha;
+          }
+
+          if (alpha > 240) {
+            samplePoints.push(makeAnchor(x, y, sData, idx, alpha));
+          } else if (alpha >= 96) {
+            softPoints.push(makeAnchor(x, y, sData, idx, alpha));
+          }
+        }
+      }
+
+      let anchorSource = samplePoints;
+      if (samplePoints.length < 32 && softPoints.length) {
+        const dynamicAlphaFloor = Math.max(96, maxAlpha - 60);
+        anchorSource = softPoints
+          .filter((point) => point.a >= dynamicAlphaFloor)
+          .sort((left, right) => right.a - left.a);
+
+        if (!anchorSource.length) {
+          anchorSource = [...softPoints].sort((left, right) => right.a - left.a);
+        }
+      }
+
+      const step = Math.max(1, Math.floor(anchorSource.length / 800));
+      const anchors = [];
+      for (let i = 0; i < anchorSource.length; i += step) {
+        anchors.push(anchorSource[i]);
+      }
+
+      return anchors;
+    }
+
+    function findMatchesForAsset(bCan, bData, sCan, anchors) {
+      const matches = [];
+      const firstMatch = scanBestMatch(bCan, bData, sCan, anchors, []);
+      if (!firstMatch) {
+        return matches;
+      }
+
+      matches.push(firstMatch);
+
+      const maxInstances = getMaxInstances(sCan, bCan, firstMatch.hitRatio);
+      if (maxInstances === 1) {
+        return matches;
+      }
+
+      const repeatMinHits = Math.max(
+        Math.floor(firstMatch.hits * 0.9),
+        Math.floor(anchors.length * 0.72)
+      );
+
+      while (matches.length < maxInstances) {
+        const nextMatch = scanBestMatch(bCan, bData, sCan, anchors, matches);
+        if (!nextMatch || nextMatch.hits < repeatMinHits) {
+          break;
+        }
+
+        matches.push(nextMatch);
+      }
+
+      return matches;
+    }
+
+    function scanBestMatch(bCan, bData, sCan, anchors, blockedMatches) {
+      let bestX = 0;
+      let bestY = 0;
+      let maxHits = -1;
+      const tolerance = 15;
+      const totalAnchors = anchors.length;
+
+      for (let y = 0; y <= bCan.height - sCan.height; y++) {
+        for (let x = 0; x <= bCan.width - sCan.width; x++) {
+          if (hasHeavyOverlap(x, y, sCan.width, sCan.height, blockedMatches)) {
+            continue;
+          }
+
+          let hits = 0;
+          let misses = 0;
+
+          for (const a of anchors) {
+            const bIdx = ((y + a.y) * bCan.width + (x + a.x)) * 4;
+            const diff =
+              Math.abs(bData[bIdx] - a.r) +
+              Math.abs(bData[bIdx + 1] - a.g) +
+              Math.abs(bData[bIdx + 2] - a.b);
+            const adaptiveTolerance = tolerance + Math.max(0, 220 - a.a) * 0.35;
+
+            if (diff <= adaptiveTolerance) {
+              hits++;
+            } else {
+              misses++;
+              if (totalAnchors - misses <= maxHits) {
+                break;
+              }
+            }
+          }
+
+          if (hits > maxHits) {
+            maxHits = hits;
+            bestX = x;
+            bestY = y;
+          }
+
+          if (maxHits > totalAnchors * 0.98) {
+            break;
+          }
+        }
+
+        if (maxHits > totalAnchors * 0.98) {
+          break;
+        }
+      }
+
+      if (maxHits < 0) {
+        return null;
+      }
+
+      return {
+        x: bestX,
+        y: bestY,
+        hits: maxHits,
+        hitRatio: totalAnchors ? maxHits / totalAnchors : 0
+      };
+    }
+
+    function hasHeavyOverlap(x, y, w, h, matches) {
+      for (const match of matches) {
+        const overlapW = Math.max(0, Math.min(x + w, match.x + w) - Math.max(x, match.x));
+        const overlapH = Math.max(0, Math.min(y + h, match.y + h) - Math.max(y, match.y));
+        const overlapArea = overlapW * overlapH;
+
+        if (overlapArea / (w * h) > 0.2) {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    function getMaxInstances(sCan, bCan, firstHitRatio) {
+      if (firstHitRatio < 0.78) {
+        return 1;
+      }
+
+      const areaRatio = (sCan.width * sCan.height) / (bCan.width * bCan.height);
+      if (areaRatio <= 0.015) {
+        return 6;
+      }
+      if (areaRatio <= 0.05) {
+        return 4;
+      }
+      if (areaRatio <= 0.12) {
+        return 2;
+      }
+      return 1;
+    }
+
+    function makeAnchor(x, y, sData, idx, alpha) {
+      return {
+        x,
+        y,
+        r: sData[idx],
+        g: sData[idx + 1],
+        b: sData[idx + 2],
+        a: alpha
+      };
+    }
+
+    function getLayerHint(fileName, sCan, sData, anchors) {
+      const name = String(fileName || '').toLowerCase();
+      const avgAlpha = anchors.length
+        ? anchors.reduce((sum, anchor) => sum + anchor.a, 0) / anchors.length
+        : 255;
+      const area = sCan.width * sCan.height;
+      const alphaProfile = sampleAlphaProfile(sCan, sData);
+
+      if (/logo|icon|badge|title|corner|角标|按钮|btn|maoxian|newchengjiu/.test(name)) {
+        return 'foreground';
+      }
+      if (/ray|light|glow|shine|effect|fx|flare|spark|射线|辉光|特效/.test(name)) {
+        return 'effect';
+      }
+      if (/bg|background|底图|背景/.test(name)) {
+        return 'background';
+      }
+
+      if (alphaProfile.semiRatio > 0.08 || alphaProfile.transparentRatio > 0.45 || avgAlpha < 190) {
+        return 'effect';
+      }
+      if (area > 250000 && alphaProfile.opaqueRatio > 0.9 && alphaProfile.transparentRatio < 0.02) {
+        return 'background';
+      }
+      if (area > 250000) {
+        return 'content';
+      }
+      return 'content';
+    }
+
+    function sampleAlphaProfile(sCan, sData) {
+      let opaque = 0;
+      let semi = 0;
+      let transparent = 0;
+      const stride = 10;
+
+      for (let y = 0; y < sCan.height; y += stride) {
+        for (let x = 0; x < sCan.width; x += stride) {
+          const idx = (y * sCan.width + x) * 4;
+          const alpha = sData[idx + 3];
+          if (alpha >= 245) {
+            opaque++;
+          } else if (alpha >= 20) {
+            semi++;
+          } else {
+            transparent++;
+          }
+        }
+      }
+
+      const total = Math.max(1, opaque + semi + transparent);
+      return {
+        opaqueRatio: opaque / total,
+        semiRatio: semi / total,
+        transparentRatio: transparent / total
+      };
+    }
+
+    function dataUrlToUint8Array(dataUrl) {
+      return new Uint8Array(
+        atob(dataUrl.split(',')[1]).split('').map((char) => char.charCodeAt(0))
+      );
+    }
+
+    function readAsDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => resolve(event.target.result);
+        reader.onerror = () => reject(reader.error || new Error('文件读取失败'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function imgP(src) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.src = src;
+      });
+    }
+
+    updatePickerUI();
   </script>
 </body>
 </html>

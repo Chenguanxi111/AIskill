@@ -1,4 +1,4 @@
-figma.showUI(__html__, { width: 340, height: 480, title: "VisionLayout AI - HitRate 引擎" });
+﻿figma.showUI(__html__, { width: 340, height: 480, title: "VisionLayout AI - 资源定位引擎" });
 
 figma.ui.onmessage = async (msg) => {
   if (msg.type === 'final-render') {
@@ -17,11 +17,17 @@ figma.ui.onmessage = async (msg) => {
         type: 'IMAGE',
         imageHash: bgImg.hash,
         scaleMode: 'FILL',
-        opacity: 0.3 // 依然保留半透明底图，方便你严苛验收
+        opacity: 0.3
       }];
 
-      // 面积排序，防遮挡
-      const sorted = config.list.sort((a, b) => (b.w * b.h) - (a.w * a.h));
+      const sorted = [...config.list].sort((a, b) => {
+        const layerOrderDiff = getLayerOrder(a) - getLayerOrder(b);
+        if (layerOrderDiff !== 0) {
+          return layerOrderDiff;
+        }
+
+        return (b.w * b.h) - (a.w * a.h);
+      });
 
       for (const item of sorted) {
         const rect = figma.createRectangle();
@@ -36,10 +42,19 @@ figma.ui.onmessage = async (msg) => {
 
       figma.currentPage.appendChild(mainFrame);
       figma.viewport.scrollAndZoomIntoView([mainFrame]);
-      figma.notify("✨ 全新引擎识别完毕，绝对对齐。");
-      
+      figma.notify("资源识别完成，位置已还原。");
     } catch (e) {
       figma.notify("错误: " + e.message);
     }
   }
 };
+
+function getLayerOrder(item) {
+  const hint = item.layerHint || 'content';
+  if (hint === 'background') return 0;
+  if (hint === 'content') return 1;
+  if (hint === 'effect') return 2;
+  if (hint === 'foreground') return 3;
+  if (hint === 'overlay') return 4;
+  return 1;
+}
